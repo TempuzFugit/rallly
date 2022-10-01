@@ -1,10 +1,12 @@
 version: "3.3"
+
 services:
   rallly_db:
     image: postgres:14.2
-    restart: always
+    restart: unless-stopped
+    container_name: Rallly-db
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - /volume1/docker/rallly/db:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=postgres
 
@@ -13,16 +15,27 @@ services:
       context: .
       args:
         - DATABASE_URL=postgres://postgres:postgres@rallly_db:5432/db?pgbouncer=true
-    restart: always
+        - NEXT_PUBLIC_BASE_URL=http://192.168.4.10:3300
+    restart: unless-stopped
+    container_name: Rallly
+    command: sh -c "yarn prisma migrate deploy --schema prisma/schema.prisma && yarn start"
     depends_on:
       - rallly_db
     ports:
-      - 3000:3000
+      - 3300:3000 #change before the `:` if necessary to avoid port conflicts
     environment:
       - DATABASE_URL=postgres://postgres:postgres@rallly_db:5432/db
+    networks:
+      - default
     env_file:
       - .env
-
+#uncomment and modify the following to user your reverse proxy
+#      - proxy
+      
 volumes:
   db-data:
     driver: local
+
+networks:
+  default:
+    name: rallly
